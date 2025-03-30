@@ -81,7 +81,7 @@
 
         function logoutUser() {
             $.ajax({
-                url: 'http://localhost:5050/api/logout',
+                url: 'http://ec2-54-252-62-222.ap-southeast-2.compute.amazonaws.com:5050/api/logout',
                 type: 'GET',
                 success: function () {
                     localStorage.clear();
