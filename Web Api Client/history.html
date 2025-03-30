@@ -73,7 +73,7 @@
             $('#homeLink').attr("href", "home.html?user_id=" + userId);
 
             $.ajax({
-        url: "http://localhost:5050/api/history",
+        url: "http://ec2-54-252-62-222.ap-southeast-2.compute.amazonaws.com:5050/api/history",
         type: "GET",
         success: function (response) {
           if (response.success && response.history.length > 0) {
