@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patient Home</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+        body { padding-top: 50px; background-color: #f8f9fa; }
+        .container { max-width: 900px; }
+        .panel-heading { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#">Patient Dashboard</a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar-menu">
+                <ul class="nav navbar-nav">
+                    <li ><a id="homeLink" href="#">Home</a></li>
+                    <li class="active"><a id="predictLink" href="#">Predict</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="#" id="welcomeUser"></a></li>
+                    <li><a href="#" onclick="logoutUser()">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <br/><br/>
+
+    <div class="container">
+        <h2 class="mb-4">Your Prediction History</h2>
+    <table class="table table-bordered" id="historyTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Pregnancies</th>
+          <th>Glucose</th>
+          <th>Blood Pressure</th>
+          <th>Skin Thickness</th>
+          <th>Insulin</th>
+          <th>BMI</th>
+          <th>Diabetes Pedigree</th>
+          <th>Age</th>
+          <th>Probability (%)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <script>
+
+        $(document).ready(function () {
+            const params = new URLSearchParams(window.location.search);
+            const userId = params.get("user_id");
+            const username = localStorage.getItem("username") || "User";
+
+            if (!userId) {
+                localStorage.clear();
+                window.location.href = 'login.html';
+                return;
+            }
+           
+            $('#welcomeUser').text("Welcome, " + username + " (ID: " + userId + ")");
+            //$('#predictBtn').attr("href", "Predictor.html?user_id=" + userId);
+            $('#predictLink').attr("href", "Predictor.html?user_id=" + userId);
+            $('#homeLink').attr("href", "home.html?user_id=" + userId);
+
+            $.ajax({
+        url: "http://localhost:5050/api/history",
+        type: "GET",
+        success: function (response) {
+          if (response.success && response.history.length > 0) {
+            const tableBody = $("#historyTable tbody");
+            tableBody.empty();
+
+            response.history.forEach(record => {
+              if (record.patient_id == userId) {
+                const row = `<tr>
+                  <td>${record.created_at}</td>
+                  <td>${record.pregnancies}</td>
+                  <td>${record.glucose}</td>
+                  <td>${record.blood_pressure}</td>
+                  <td>${record.skin_thickness}</td>
+                  <td>${record.insulin}</td>
+                  <td>${record.bmi}</td>
+                  <td>${record.diabetes_pedigree}</td>
+                  <td>${record.age}</td>
+                  <td>${record.probability}</td>
+                </tr>`;
+                tableBody.append(row);
+              }
+            });
+          } else {
+            alert("No prediction history found.");
+          }
+        },
+        error: function () {
+          alert("Failed to load history.");
+        }
+      });
+
+
+        });
+
+
+
+        function logoutUser() {
+            $.ajax({
+                url: 'http://localhost:5005/api/logout',
+                type: 'GET',
+                success: function () {
+                    localStorage.clear();
+                    window.location.href = 'login.html';
+                },
+                error: function () {
+                    alert("Error logging out.");
+                }
+            });
+        }
+
+        function predictDiabetes() {
+            let patientData = {
+                Pregnancies: parseFloat($('#pregnancies').val()),
+                Glucose: parseFloat($('#glucose').val()),
+                BloodPressure: parseFloat($('#bloodPressure').val()),
+                SkinThickness: parseFloat($('#skinThickness').val()),
+                Insulin: parseFloat($('#insulin').val()),
+                BMI: parseFloat($('#bmi').val()),
+                DiabetesPedigree: parseFloat($('#diabetesPedigree').val()),
+                Age: parseInt($('#age').val())
+            };
+
+            $.ajax({
+                url: 'http://localhost:5005/api/predict',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(patientData),
+                success: function(response) {
+                    $('#result').html('<strong>Diabetes Risk:</strong> ' + response.probability + '%');
+                    $('#result').show();
+                },
+                error: function() {
+                    $('#result').html('<span class="text-danger">Error processing prediction.</span>');
+                    $('#result').show();
+                }
+            });
+        }
+    </script>
+   
+</body>
+</html>
