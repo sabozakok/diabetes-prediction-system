@@ -1,0 +1,10 @@
+pandas
+numpy
+tensorflow
+scikit-learn
+flask
+flask-cors
+joblib
+psycopg2
+flask-login 
+flask-bcrypt 

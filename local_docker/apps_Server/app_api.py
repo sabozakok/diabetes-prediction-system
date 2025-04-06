@@ -8,6 +8,7 @@ import psycopg2
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_cors import CORS  # Import Flask-CORS
+from flask import session
 
 app = Flask(__name__, template_folder="templates")
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Allows CORS only for /predict
@@ -27,10 +28,17 @@ scaler = joblib.load(scaler_path)
 model = load_model(model_path)
 
 # Database connection
-DB_HOST = os.getenv("DB_HOST", "postgres-db")
+DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "diabetes_db")
 DB_USER = os.getenv("DB_USER", "admin")
 DB_PASS = os.getenv("DB_PASS", "password")
+
+# Configure session settings
+app.config["SESSION_PERMANENT"] = True  # Make sessions persistent
+app.config["SESSION_TYPE"] = "filesystem"  # Store sessions on the server
+app.config["SESSION_COOKIE_HTTPONLY"] = True  # Protect against XSS attacks
+app.config["SESSION_COOKIE_SECURE"] = False  # Set to True in production (requires HTTPS)
+app.config["REMEMBER_COOKIE_DURATION"] = 86400 * 7  # Keep users logged in for 7 days
 
 def get_db_connection():
     return psycopg2.connect(
@@ -111,47 +119,33 @@ def predict(data):
 # Define User class for authentication
 class User(UserMixin):
     def __init__(self, id, username, password):
-        self.id = id
+        self.id = str(id)  # Flask-Login expects string type
         self.username = username
         self.password = password
 
+
 @login_manager.user_loader
 def load_user(user_id):
+    print("🔁 load_user called with ID:", user_id)  # Debug print
+
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id, username, password FROM users WHERE id = %s", (user_id,))
     user = cur.fetchone()
     cur.close()
     conn.close()
-    return User(*user) if user else None
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        full_name = request.form["full_name"]
-        phone = request.form["phone"]
-        email = request.form["email"]
-        username = request.form["username"]
-        password = bcrypt.generate_password_hash(request.form["password"]).decode('utf-8')
-        role = request.form["role"]
+    if user:
+        print("✅ User found:", user)
+        return User(user[0], user[1], user[2])
+    else:
+        print("❌ User not found")
+        return None
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-        try:
-            cur.execute("""
-                INSERT INTO users (username, password, full_name, phone,email, role) 
-                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-            """, (username, password, full_name, phone,email, role))
-            user_id = cur.fetchone()[0]
-            conn.commit()
-            login_user(User(user_id, username, password))
-            return redirect(url_for("home"))
-        except psycopg2.IntegrityError:
-            conn.rollback()
-            flash("Username or phone number already exists!", "danger")
-        cur.close()
-        conn.close()
-    return render_template("register.html")
+
+
+
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -176,10 +170,11 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-@app.route("/")
-#@login_required
+# Home Page Route (Redirects to login if unauthenticated)
+@app.route("/home")
+@login_required
 def home():
-    return render_template("index.html")
+    return render_template("home.html")
 
 @app.route("/patients")
 @login_required
@@ -308,9 +303,193 @@ def Predict():
             save_prediction_to_db(data, prediction_prob,int(request.form.get("PatientSelect")))
         except Exception as e:
             flash(str(e), "danger")   
-    return render_template("prediction.html", prediction=prediction, probability=probability)
+    return render_template("Prediction.html", prediction=prediction, probability=probability)
+
+#API
+@app.route("/api/predict", methods=["POST"])
+def api_predict():
+    try:
+        data = request.get_json()
+        print("📥 Received data:", data)
+
+        required_fields = [
+            "Pregnancies", "Glucose", "BloodPressure", "SkinThickness",
+            "Insulin", "BMI", "DiabetesPedigree", "Age"
+        ]
+
+        # Validate presence of JSON and required fields
+        if not data:
+            return jsonify({"error": "Missing JSON payload"}), 400
+
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
+
+        # Extract input values as floats
+        input_data = [float(data[field]) for field in required_fields]
+
+        # Predict
+        input_array = np.array(input_data).reshape(1, -1)
+        scaled_data = scaler.transform(input_array)
+        prediction_prob = float(model.predict(scaled_data)[0][0])  # convert to native float
+        prediction = int(prediction_prob > 0.5)
+        probability = round(prediction_prob * 100, 2)
+
+        # Save to DB if user_Id is provided
+        user_id = data.get("user_Id")
+        if user_id:
+            try:
+                save_prediction_to_db(input_data, prediction_prob, int(user_id))
+            except Exception as e:
+                print("⚠️ Failed to save prediction:", e)
+
+        return jsonify({
+            "prediction": prediction,
+            "probability": probability
+        })
+
+    except Exception as e:
+        print("❌ Prediction error:", str(e))
+        return jsonify({"error": str(e)}), 400
+
+
+
+# API: Login
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, password FROM users WHERE username = %s", (username,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if user and bcrypt.check_password_hash(user[1], password):
+        user_obj = User(user[0], username, user[1])
+        login_user(user_obj, remember=True)
+        session.permanent = True
+        return jsonify({
+            "success": True,
+            "user_id": user[0],
+            "username": username
+        })
+
+    return jsonify({"success": False, "message": "Invalid credentials!"})
+
+@app.route("/api/register", methods=["POST"])
+def api_register():
+    data = request.get_json()
+
+    full_name = data.get("full_name")
+    phone = data.get("phone")
+    email = data.get("email")
+    username = data.get("username")
+    password_raw = data.get("password")
+    role = data.get("role")
+
+    if not all([full_name, phone,email, username, password_raw, role]):
+        return jsonify({"success": False, "message": "Missing required fields!"}), 400
+
+    password = bcrypt.generate_password_hash(password_raw).decode("utf-8")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO users (username, password, full_name, phone,email, role)
+            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+        """, (username, password, full_name, phone,email, role))
+        user_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        user_obj = User(user_id, username, password)
+        login_user(user_obj)
+
+        return jsonify({
+            "success": True,
+            "message": "Registration successful!",
+            "user_id": user_id,
+            "username": username
+        }), 201
+
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        cur.close()
+        conn.close()
+        return jsonify({"success": False, "message": "Username or phone already exists!"}), 409
+
+    
+
+
+# API: Logout
+@app.route("/api/home_login_check", methods=["GET"])
+def api_home_login_check():
+    if current_user.is_authenticated:
+        return jsonify({
+            "logged_in": True,
+            "username": current_user.username
+        })
+    return jsonify({"logged_in": False})
+
+@app.route("/api/logout", methods=["GET"])
+#@login_required
+def api_logout():
+    #logout_user()
+    #session.clear()
+    return jsonify({"success": True, "message": "Logged out successfully."})
+
+@app.route("/debug/session")
+def debug_session():
+    return jsonify(dict(session))
+
+
+@app.route("/api/current_user", methods=["GET"])
+@login_required
+def api_current_user():
+    return jsonify({"id": current_user.id, "username": current_user.username})
+
+@app.route("/api/history", methods=["GET"])
+#@login_required
+def api_history():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT users.id, predictions.created_at, pregnancies, glucose, blood_pressure, 
+               skin_thickness, insulin, bmi, diabetes_pedigree, age, probability
+        FROM predictions
+        JOIN users ON predictions.patient_id = users.id
+        ORDER BY predictions.created_at DESC
+    """)
+    history_data = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    history_records = [
+        {
+            "patient_id": record[0],
+            "created_at": record[1].strftime("%Y-%m-%d %H:%M:%S"),
+            "pregnancies": record[2],
+            "glucose": record[3],
+            "blood_pressure": record[4],
+            "skin_thickness": record[5],
+            "insulin": record[6],
+            "bmi": record[7],
+            "diabetes_pedigree": record[8],
+            "age": record[9],
+            "probability": round(record[10] * 100, 2)
+        }
+        for record in history_data
+    ]
+
+    return jsonify({"success": True, "history": history_records})
 
 if __name__ == "__main__":
     create_users_table()
     create_predictions_table()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5050, debug=True)
