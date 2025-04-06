@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Doctors - Diabetes Prediction System</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+        body { padding-top: 50px; background-color: #f8f9fa; }
+        .container { max-width: 900px; }
+        .panel-heading { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="index.html">Diabetes Prediction System</a>
+            </div>
+            <ul class="nav navbar-nav">
+                <li><a href="{{ url_for('home') }}">home</a></li>
+                <li><a href="{{ url_for('patients') }}">Patients</a></li>
+                <li class="active"><a href="{{ url_for('doctors') }}">Doctors</a></li>
+                <li><a href="{{ url_for('prediction') }}">Prediction</a></li>
+                <li><a href="{{ url_for('history') }}">History</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {% if current_user.is_authenticated %}
+                    <li><a href="#">Welcome, {{ current_user.username }}</a></li>
+                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('register') }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+<br/>
+<br/>
+<br/>
+<br/>
+    <div class="container">
+        <div class="panel panel-success">
+            <div class="panel-heading">Doctors</div>
+            <div class="panel-body">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Doctor ID</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doctor in doctors %}
+                        <tr>
+                            <td>{{ doctor.id }}</td>
+                            <td>{{ doctor.name }}</td>
+                            <td>{{ doctor.phone }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let doctors = [
+                { id: 101, name: "Dr. Sarah Johnson", specialization: "Endocrinology", contact: "sarah.johnson@hospital.com" },
+                { id: 102, name: "Dr. Mike Thompson", specialization: "Diabetes Specialist", contact: "mike.thompson@clinic.com" },
+                { id: 103, name: "Dr. Emily Carter", specialization: "Nutritionist", contact: "emily.carter@health.org" }
+            ];
+
+            doctors.forEach(doctor => {
+                $("#doctorsTable").append(`<tr><td>${doctor.id}</td><td>${doctor.name}</td><td>${doctor.specialization}</td><td>${doctor.contact}</td></tr>`);
+            });
+        });
+    </script>
+</body>
+</html>

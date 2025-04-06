@@ -1,0 +1,62 @@
+
+<ScrollView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="24dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout 
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:text="Enter Health Information"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <EditText android:id="@+id/etPregnancies" android:hint="Pregnancies" android:inputType="number"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etGlucose" android:hint="Glucose Level" android:inputType="number"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etBP" android:hint="Blood Pressure" android:inputType="number"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etSkin" android:hint="Skin Thickness" android:inputType="number"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etInsulin" android:hint="Insulin" android:inputType="number"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etBMI" android:hint="BMI" android:inputType="numberDecimal"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etDPF" android:hint="Diabetes Pedigree Function" android:inputType="numberDecimal"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/etAge" android:hint="Age" android:inputType="number"
+            android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnPredict"
+            android:text="Predict"
+            android:layout_marginTop="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_marginTop="16dp"
+            android:visibility="gone"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/tvResult"
+            android:layout_marginTop="16dp"
+            android:textSize="18sp"
+            android:visibility="gone"
+            android:textColor="@android:color/holo_blue_dark"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+</ScrollView>

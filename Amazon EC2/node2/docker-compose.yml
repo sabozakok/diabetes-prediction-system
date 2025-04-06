@@ -1,0 +1,49 @@
+services:
+  backend:
+    build: .
+    container_name: backend-node2
+    restart: always
+    environment:
+      - DB_HOST=pgbouncer
+      - DB_NAME=diabetes_db
+      - DB_USER=admin
+      - DB_PASS=password
+    ports:
+      - "5000:5000"
+    depends_on:
+      - pgbouncer
+    networks:
+      - app-network
+
+  api:
+    build: .
+    container_name: api-node2
+    restart: always
+    command: python app_api.py
+    environment:
+      - DB_HOST=pgbouncer
+      - DB_NAME=diabetes_db
+      - DB_USER=admin
+      - DB_PASS=password
+    ports:
+      - "5050:5050"
+    depends_on:
+      - pgbouncer
+    networks:
+      - app-network
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    container_name: pgbouncer-node2
+    restart: always
+    ports:
+      - "6432:6432"
+    environment:
+      DATABASE_URL: postgres://admin:password@172.31.6.36:5432/diabetes_db 
+      PGBOUNCER_POOL_MODE: transaction
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
