@@ -1,1 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI-Powered Diabetes Prediction</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+        body { padding-top: 50px; background-color: #f8f9fa; }
+        .container { max-width: 900px; }
+        .panel-heading { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-menu">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Diabetes Prediction System</a>
+                
+            </div>
+            <div class="collapse navbar-collapse" id="navbar-menu">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="{{ url_for('home') }}">home</a></li>
+                    <li><a href="{{ url_for('patients') }}">Patients</a></li>
+                    <li><a href="{{ url_for('doctors') }}">Doctors</a></li>
+                    <li><a href="{{ url_for('prediction') }}">Prediction</a></li>
+                    <li><a href="{{ url_for('history') }}">History</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    {% if current_user.is_authenticated %}
+                        <li><a href="#">Welcome, {{ current_user.username }}</a></li>
+                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('login') }}">Login</a></li>
+                        <li><a href="{{ url_for('register') }}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+    <div class="container">
+        <div class="jumbotron text-center">
+            <h1>AI-Powered Diabetes Prediction</h1>
+            <p>Providing real-time, accurate, and secure diabetes risk assessments.</p>
+        </div>
 
+        <div id="patients" class="panel panel-primary">
+            <div class="panel-heading">Patients</div>
+            <div class="panel-body">
+                <p>Manage patient records and view health history.</p>
+            </div>
+        </div>
+
+        <div id="doctors" class="panel panel-success">
+            <div class="panel-heading">Doctors</div>
+            <div class="panel-body">
+                <p>Access and analyze patient health data for better diagnosis.</p>
+            </div>
+        </div>
+
+        
+
+        
+    </div>
+
+    <script>
+        function predictDiabetes() {
+            let patientData = {
+                pregnancies: parseFloat($('#pregnancies').val()),
+                glucose: parseFloat($('#glucose').val()),
+                blood_pressure: parseFloat($('#bloodPressure').val()),
+                skin_thickness: parseFloat($('#skinThickness').val()),
+                insulin: parseFloat($('#insulin').val()),
+                bmi: parseFloat($('#bmi').val()),
+                diabetes_pedigree: parseFloat($('#diabetesPedigree').val()),
+                age: parseInt($('#age').val())
+            };
+
+            $.ajax({
+                url: '/predict',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(patientData),
+                success: function(response) {
+                    $('#result').html('<strong>Diabetes Risk:</strong> ' + (response.probability * 100).toFixed(2) + '%');
+                    addToHistory(patientData.glucose, patientData.bmi, (response.probability * 100).toFixed(2));
+                },
+                error: function() {
+                    $('#result').html('<span class="text-danger">Error processing prediction.</span>');
+                }
+            });
+        }
+
+        function addToHistory(glucose, bmi, probability) {
+            let row = '<tr><td>' + new Date().toLocaleString() + '</td><td>' + glucose + '</td><td>' + bmi + '</td><td>' + probability + '%</td></tr>';
+            $('#historyTable').prepend(row);
+        }
+    </script>
+</body>
+</html>
