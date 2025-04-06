@@ -49,7 +49,7 @@ cd local_docker
 If on local directory:
 Cd to application directory 
 Example: 
-Cd C:\Data\DELL DESKTOP\UUM\UUMKL\Courses\STIJ5014 DISTRIBUTED SYSTEMS\assignment\project\Final Project Assignment\local_docker\apps_Server
+Cd ...\local_docker\apps_Server
 
 Step 2: Ensure Required Files Exist
 -----------------------------------
