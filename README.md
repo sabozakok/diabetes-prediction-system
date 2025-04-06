@@ -122,6 +122,7 @@ Cleaning Up
 -----------
 To stop and remove all containers:
 docker-compose down -v
+
 Run Locally Using Visual Studio Code (VS Code)
 Follow these steps to set up and run the application locally using Visual Studio Code:
 Step 1: Install VS Code and Python & PostgreSQL server
